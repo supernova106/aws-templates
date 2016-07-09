@@ -297,7 +297,7 @@
             ],
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
-                "GroupDescription": "NAT Security Group, enable internal traffic 0-65535 to NAT instance",
+                "GroupDescription": "NAT Security Group",
                 "VpcId": {
                     "Ref": "VPC"
                 },
@@ -437,15 +437,122 @@
                     "Ref": "NATDevice"
                 }
             }
+        },
+        "PublicELB": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Descriptions": "ELB for frontend webservers",
+            "Properties": {
+                "Listeners": [
+                    {
+                        "LoadBalancerPort": "80",
+                        "InstancePort": {
+                            "Ref": "WebServerPort"
+                        },
+                        "Protocol": "HTTP",
+                        "PolicyNames": [
+                            "ELBPolicy"
+                        ]
+                    }
+                ],
+                "CrossZone": true,
+                "ConnectionDrainingPolicy": {
+                    "Enabled": true,
+                    "Timeout": 400
+                },
+                "Subnets": [
+                    {
+                        "Ref": "PublicSubnet"
+                    }
+                ],
+                "HealthCheck": {
+                    "Target": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "HTTP:",
+                                {
+                                    "Ref": "WebServerPort"
+                                },
+                                "/"
+                            ]
+                        ]
+                    },
+                    "HealthyThreshold": "3",
+                    "UnhealthyThreshold": "5",
+                    "Interval": "30",
+                    "Timeout": "5"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Public ELB"
+                    }
+                ]
+            }
+        },
+        "PrivateELB": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "Listeners": [
+                    {
+                        "LoadBalancerPort": "80",
+                        "InstancePort": {
+                            "Ref": "WebServerPort"
+                        },
+                        "Protocol": "HTTP",
+                        "PolicyNames": [
+                            "ELBPolicy"
+                        ]
+                    }
+                ],
+                "CrossZone": true,
+                "Subnets": [
+                    {
+                        "Ref": "PrivateSubnet"
+                    }
+                ],
+                "HealthCheck": {
+                    "Target": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "HTTP:",
+                                {
+                                    "Ref": "WebServerPort"
+                                },
+                                "/"
+                            ]
+                        ]
+                    },
+                    "HealthyThreshold": "3",
+                    "UnhealthyThreshold": "5",
+                    "Interval": "30",
+                    "Timeout": "5"
+                },
+                "Tags": [
+                    {
+                        "Key": "Name",
+                        "Value": "Private ELB"
+                    }
+                ]
+            }
         }
     },
     "Outputs": {
-        "NATIP": {
-            "Description": "NAT IP address",
+        "URL": {
+            "Description": "URL of the website",
             "Value": {
-                "Fn::GetAtt": [
-                    "NAT",
-                    "PublicIp"
+                "Fn::Join": [
+                    "",
+                    [
+                        "http://",
+                        {
+                            "Fn::GetAtt": [
+                                "PublicELB",
+                                "DNSName"
+                            ]
+                        }
+                    ]
                 ]
             }
         }
