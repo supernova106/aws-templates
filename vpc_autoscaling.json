@@ -506,6 +506,10 @@
                     }
                 ],
                 "CrossZone": true,
+                "ConnectionDrainingPolicy": {
+                    "Enabled": true,
+                    "Timeout": 400
+                },
                 "Subnets": [
                     {
                         "Ref": "PrivateSubnet"

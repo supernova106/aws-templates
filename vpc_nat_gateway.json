@@ -6,7 +6,8 @@
         "TagValue": {
             "Description": "Name of Environment",
             "Type": "String",
-            "Default": [
+            "Default": "Development",
+            "AllowedPattern": [
                 "Development",
                 "Staging",
                 "Production"
@@ -336,128 +337,18 @@
                 }
             }
         },
-        "NatSecurityGroup": {
-            "DependsOn": [
-                "VPC"
-            ],
-            "Type": "AWS::EC2::SecurityGroup",
-            "Properties": {
-                "GroupDescription": "NAT Security Group, enable internal traffic 0-65535 to NAT instance",
-                "VpcId": {
-                    "Ref": "VPC"
-                },
-                "SecurityGroupIngress": [
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "0",
-                        "ToPort": "65535",
-                        "CidrIp": {
-                            "Fn::FindInMap": [
-                                "SubnetConfig",
-                                "VPC",
-                                "CIDR"
-                            ]
-                        }
-                    },
-                    {
-                        "IpProtocol": "udp",
-                        "FromPort": "0",
-                        "ToPort": "65535",
-                        "CidrIp": {
-                            "Fn::FindInMap": [
-                                "SubnetConfig",
-                                "VPC",
-                                "CIDR"
-                            ]
-                        }
-                    },
-                    {
-                        "IpProtocol": "icmp",
-                        "FromPort": "-1",
-                        "ToPort": "-1",
-                        "CidrIp": {
-                            "Fn::FindInMap": [
-                                "SubnetConfig",
-                                "VPC",
-                                "CIDR"
-                            ]
-                        }
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "22",
-                        "ToPort": "22",
-                        "CidrIp": {
-                            "Ref": "ServerAccess"
-                        }
-                    }
-                ],
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "NAT Security Group"
-                    }
-                ]
-            }
-        },
         "NAT": {
-            "DependsOn": [
-                "PublicSubnet",
-                "NatSecurityGroup"
-            ],
-            "Type": "AWS::EC2::Instance",
+            "DependsOn": "GatewayToInternet",
+            "Type": "AWS::EC2::NatGateway",
             "Properties": {
-                "InstanceType": "m3.medium",
-                "KeyName": {
-                    "Ref": "KeyPairName"
-                },
-                "SourceDestCheck": "false",
-                "ImageId": {
-                    "Fn::FindInMap": [
-                        "NatRegionMap",
-                        {
-                            "Ref": "AWS::Region"
-                        },
-                        "AMI"
+                "AllocationId": {
+                    "Fn::GetAtt": [
+                        "NATIPAddress",
+                        "AllocationId"
                     ]
                 },
-                "NetworkInterfaces": [
-                    {
-                        "GroupSet": [
-                            {
-                                "Ref": "NatSecurityGroup"
-                            }
-                        ],
-                        "AssociatePublicIpAddress": "true",
-                        "DeviceIndex": "0",
-                        "DeleteOnTermination": "true",
-                        "SubnetId": {
-                            "Ref": "PublicSubnet"
-                        }
-                    }
-                ],
-                "Tags": [
-                    {
-                        "Key": "Name",
-                        "Value": "NAT"
-                    },
-                    {
-                        "Key": "Environment",
-                        "Value": {
-                            "Ref": "TagValue"
-                        }
-                    }
-                ],
-                "UserData": {
-                    "Fn::Base64": {
-                        "Fn::Join": [
-                            "",
-                            [
-                                "#!/bin/bash\n",
-                                "yum update -y && yum install -y yum-cron && chkconfig yum-cron on"
-                            ]
-                        ]
-                    }
+                "SubnetId": {
+                    "Ref": "PublicSubnet"
                 }
             }
         },
